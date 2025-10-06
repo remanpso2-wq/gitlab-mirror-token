@@ -154,6 +154,18 @@ import jpholiday
 from django.conf import settings
 from django.db import models
 
+import { useEffect, useState } from "react";
+interface ContactEntry {
+id: number;
+student_name: string;
+date: string;
+content: string;
+condition: string;
+liked: boolean;
+read_by_teacher: boolean;
+}
+
+
 class ContactEntry(models.Model):
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="entries")
     date = models.DateField(auto_now_add=True)
@@ -205,6 +217,55 @@ const today = new Date();
 const isHoliday = today.getDay() === 0 || today.getDay() === 6 || checkJapaneseHoliday(today);
 
 <button disabled={isHoliday}>提出</button>
+
+import { useEffect, useState } from "react";
+interface ContactEntry {
+id: number;
+student_name: string;
+date: string;
+content: string;
+condition: string;
+liked: boolean;
+read_by_teacher: boolean;
+}
+export default function ContactList() {
+const [entries, setEntries] = useState<ContactEntry[]>([]);
+useEffect(() => {
+fetch("/api/contactentries/")
+.then(res => res.json())
+.then(data => setEntries(data));
+}, []);
+return (
+<div className="p-4">
+<h1 className="text-2xl mb-4">連絡帳一覧</h1>
+<table className="w-full border">
+<thead>
+<tr className="bg-gray-200">
+<th className="p-2 border">日付</th>
+<th className="p-2 border">生徒名</th>
+<th className="p-2 border">内容</th>
+<th className="p-2 border">状態</th>
+<th className="p-2 border">👍</th>
+<th className="p-2 border">既読</th>
+</tr>
+</thead>
+<tbody>
+{entries.map(e => (
+<tr key={e.id}>
+<td className="border p-2">{e.date}</td>
+<td className="border p-2">{e.student_name}</td>
+<td className="border p-2">{e.content}</td>
+<td className="border p-2">{e.condition}</td>
+<td className="border p-2">{e.liked ? "👍" : ""}</td>
+<td className="border p-2">{e.read_by_teacher ? "✅" : ""}</td>
+</tr>
+))}
+</tbody>
+</table>
+</div>
+);
+}
+
 
 stages:
   - lint
