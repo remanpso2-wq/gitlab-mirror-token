@@ -209,7 +209,7 @@ stages:
 
 
 variables:
-REGISTRY: registry.gitlab.com/<Takamasa Mochizuki>/<Mochizuki_Takamasa_internProject01>
+REGISTRY: registry.gitlab.com/<TAKAMASA MOCHIZUKI>/<Mochizuki_Takamasa_internProject01>
 FRONTEND_IMAGE: $REGISTRY/frontend
 BACKEND_IMAGE: $REGISTRY/backend
 
