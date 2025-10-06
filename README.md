@@ -96,169 +96,194 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
-class User(AbstractUser):
-ROLE_CHOICES = (
-("student", "生徒"),
-("teacher", "担任"),
-("admin", "管理者"),
-)
-role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="student")
-assigned_class = models.CharField(max_length=16, blank=True, null=True)
-grade = models.CharField(max_length=16, blank=True, null=True)
+##リポジトリ構成
+school-contactbook/
+├─ frontend/                # React (TypeScript)
+│  ├─ public/
+│  ├─ src/
+│  │  ├─ components/
+│  │  ├─ pages/
+│  │  │  ├─ Login.tsx
+│  │  │  └─ ContactList.tsx
+│  │  ├─ api/
+│  │  └─ index.tsx
+│  ├─ package.json
+│  └─ tsconfig.json
+├─ backend/                 # Django
+│  ├─ contacts/
+│  ├─ users/
+│  ├─ config/
+│  ├─ requirements.txt
+│  └─ manage.py
+├─ infra/
+│  ├─ Dockerfile.frontend
+│  ├─ Dockerfile.backend
+│  └─ docker-compose.yml
+├─ .gitlab-ci.yml
+├─ README.md
+└─ LICENSE
 
-from django.db import models
+##技術スタック
+
+## Frontend: React + TypeScript + Tailwind CSS
+
+## Backend: Django + Django REST Framework
+
+## Database: PostgreSQL
+
+## 認証: JWT
+
+##CI/CD: GitLab CI + Docker
+
+##休日・祝日判定: jpholiday
+
+## PoC 要件（休日除外対応）
+
+## 生徒は平日のみ提出可能（週末・祝日は不可）
+
+## 担任が既読処理を行ったものは過去記録として扱う
+
+## 担任は当日の生徒提出状況と過去記録を閲覧可能
+
+## 管理者はユーザー作成・クラス割当可能
+
+##PC画面上で動作確認できることを PoC とする
+
+from django.core.exceptions import ValidationError
+import jpholiday
 from django.conf import settings
-
+from django.db import models
 
 class ContactEntry(models.Model):
-student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="entries")
-date = models.DateField(auto_now_add=True)
-content = models.TextField()
-condition = models.CharField(max_length=64, blank=True)
-liked = models.BooleanField(default=False)
-read_by_teacher = models.BooleanField(default=False)
-created_at = models.DateTimeField(auto_now_add=True)
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="entries")
+    date = models.DateField(auto_now_add=True)
+    content = models.TextField()
+    condition = models.CharField(max_length=64, blank=True)
+    liked = models.BooleanField(default=False)
+    read_by_teacher = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
-from rest_framework import permissions
+    def clean(self):
+        # 土日祝日は提出不可
+        if self.date.weekday() >= 5 or jpholiday.is_holiday(self.date):
+            raise ValidationError("土日祝日は提出できません")
 
+from django.contrib.auth.models import AbstractUser
+from django.db import models
 
-class IsOwnerNoEditAfterRead(permissions.BasePermission):
-def has_object_permission(self, request, view, obj):
-if request.user.role == "student":
-if obj.student != request.user:
-return False
-if obj.read_by_teacher and request.method not in permissions.SAFE_METHODS:
-return False
-elif request.user.role == "teacher":
-return obj.student.assigned_class == request.user.assigned_class
-return True
+class User(AbstractUser):
+    ROLE_CHOICES = (
+        ("student", "生徒"),
+        ("teacher", "担任"),
+        ("admin", "管理者"),
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="student")
+    assigned_class = models.CharField(max_length=16, blank=True, null=True)
+    grade = models.CharField(max_length=16, blank=True, null=True)
 
-import { useState } from "react";
-export default function Login() {
-const [email, setEmail] = useState("");
-const [password, setPassword] = useState("");
-const handleSubmit = (e: React.FormEvent) => {
-e.preventDefault();
-console.log("Login with", email, password);
-};
-return (
-<div className="flex h-screen items-center justify-center bg-gray-100">
-<form onSubmit={handleSubmit} className="bg-white p-8 rounded shadow w-80">
-<h1 className="text-xl font-bold mb-4">学校連絡帳ログイン</h1>
-<input type="email" value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="メールアドレス" className="w-full mb-2 p-2 border rounded" />
-<input type="password" value={password} onChange={(e)=>setPassword(e.target.value)} placeholder="パスワード" className="w-full mb-4 p-2 border rounded" />
-<button type="submit" className="w-full bg-blue-500 text-white p-2 rounded">ログイン</button>
-</form>
-</div>
-);
-}
+from rest_framework import viewsets
+from .models import ContactEntry
+from .serializers import ContactEntrySerializer
+import jpholiday
 
-import { useEffect, useState } from "react";
-interface ContactEntry {
-id: number;
-student_name: string;
-date: string;
-content: string;
-condition: string;
-liked: boolean;
-read_by_teacher: boolean;
-}
-export default function ContactList() {
-const [entries, setEntries] = useState<ContactEntry[]>([]);
-useEffect(() => {
-fetch("/api/contactentries/")
-.then(res => res.json())
-.then(data => setEntries(data));
-}, []);
-return (
-<div className="p-4">
-<h1 className="text-2xl mb-4">連絡帳一覧</h1>
-<table className="w-full border">
-<thead>
-<tr className="bg-gray-200">
-<th className="p-2 border">日付</th>
-<th className="p-2 border">生徒名</th>
-<th className="p-2 border">内容</th>
-<th className="p-2 border">状態</th>
-<th className="p-2 border">👍</th>
-<th className="p-2 border">既読</th>
-</tr>
-</thead>
-<tbody>
-{entries.map(e => (
-<tr key={e.id}>
-<td className="border p-2">{e.date}</td>
-<td className="border p-2">{e.student_name}</td>
-<td className="border p-2">{e.content}</td>
-<td className="border p-2">{e.condition}</td>
-<td className="border p-2">{e.liked ? "👍" : ""}</td>
-<td className="border p-2">{e.read_by_teacher ? "✅" : ""}</td>
-</tr>
-))}
-</tbody>
-</table>
-</div>
-);
-}
+class ContactEntryViewSet(viewsets.ModelViewSet):
+    serializer_class = ContactEntrySerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = ContactEntry.objects.all()
+        if user.role == "student":
+            queryset = queryset.filter(student=user)
+        elif user.role == "teacher":
+            queryset = queryset.filter(student__assigned_class=user.assigned_class)
+
+        # 土日祝日の記録は除外
+        queryset = [e for e in queryset if e.date.weekday() < 5 and not jpholiday.is_holiday(e.date)]
+        return queryset
+
+const today = new Date();
+const isHoliday = today.getDay() === 0 || today.getDay() === 6 || checkJapaneseHoliday(today);
+
+<button disabled={isHoliday}>提出</button>
 
 stages:
-- lint
-- test
-- build
-- deploy
-
+  - lint
+  - test
+  - build
+  - deploy
 
 variables:
-REGISTRY: registry.gitlab.com/<TAKAMASA MOCHIZUKI>/<Mochizuki_Takamasa_internProject01>
-FRONTEND_IMAGE: $REGISTRY/frontend
-BACKEND_IMAGE: $REGISTRY/backend
-
+  REGISTRY: registry.gitlab.com/<TAKAMASA MOCHIZUKI>/<Mochizuki_Takamasa_internProject01>
+  FRONTEND_IMAGE: $REGISTRY/frontend
+  BACKEND_IMAGE: $REGISTRY/backend
 
 lint_frontend:
-stage: lint
-image: node:20
-script:
-- cd frontend
-- npm ci
-- npm run lint
-
+  stage: lint
+  image: node:20
+  script:
+    - cd frontend
+    - npm ci
+    - npm run lint
 
 lint_backend:
-stage: lint
-image: python:3.11
-script:
-- cd backend
-- pip install -r requirements.txt
-- flake8
-
+  stage: lint
+  image: python:3.11
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+    - flake8
 
 test_backend:
-stage: test
-image: python:3.11
-script:
-- cd backend
-- pip install -r requirements.txt
-- pytest
-
+  stage: test
+  image: python:3.11
+  script:
+    - cd backend
+    - pip install -r requirements.txt
+    - pytest
 
 build_and_push:
-stage: build
-image: docker:24
-services:
-- docker:dind
-script:
-- docker build -t $FRONTEND_IMAGE:$CI_COMMIT_SHA -f infra/Dockerfile.frontend .
-- docker build -t $BACKEND_IMAGE:$CI_COMMIT_SHA -f infra/Dockerfile.backend .
-- docker push $FRONTEND_IMAGE:$CI_COMMIT_SHA
-- docker push $BACKEND_IMAGE:$CI_COMMIT_SHA
-only:
-- main
-
+  stage: build
+  image: docker:24
+  services:
+    - docker:dind
+  script:
+    - docker build -t $FRONTEND_IMAGE:$CI_COMMIT_SHA -f infra/Dockerfile.frontend .
+    - docker build -t $BACKEND_IMAGE:$CI_COMMIT_SHA -f infra/Dockerfile.backend .
+    - docker push $FRONTEND_IMAGE:$CI_COMMIT_SHA
+    - docker push $BACKEND_IMAGE:$CI_COMMIT_SHA
+  only:
+    - main
 
 deploy:
-stage: deploy
-image: alpine:latest
-script:
-- ssh $DEPLOY_USER@$DEPLOY_HOST "cd /srv/contactbook && docker-compose pull && docker-compose up -d"
-only:
-- main
+  stage: deploy
+  image: alpine:latest
+  script:
+    - ssh $DEPLOY_USER@$DEPLOY_HOST "cd /srv/contactbook && docker-compose pull && docker-compose up -d"
+  only:
+    - main
+
+## 概要
+
+## 実装内容
+- [ ] バックエンド API
+- [ ] フロントエンド UI
+- [ ] テストコード
+- [ ] ドキュメント更新
+
+## ロール別確認
+- [ ] 生徒が自分の記録だけ閲覧・提出できる（平日のみ、過去記録改変不可）
+- [ ] 担任が担当クラスの提出状況を把握できる（平日のみ）
+- [ ] 担任が既読処理を行える（過去記録化）
+- [ ] 管理者がユーザー作成・クラス割当できる
+
+## 受け入れ基準
+- ロールごとの制御が正しく機能している
+- CI/CD パイプラインでテストが通る
+
+cd <プロジェクトフォルダ>
+git init
+git remote add origin https://gitlab.com/<TAKAMASA MOCHIZUKI>/<Mochizuki_Takamasa_internProject01>.git
+git add .
+git commit -m "Initial commit: PoC骨組みコード化（休日除外対応）"
+git branch -M main
+git push -u origin main
