@@ -106,7 +106,6 @@ school-contactbook/
 │ ├─ contacts/ # Django アプリ (連絡先管理)
 │ ├─ users/ # Django アプリ (ユーザ認証・権限)
 │ ├─ notifications/ # 一斉連絡用アプリ
-│ ├─ conditions/ # 生徒コンディション管理アプリ
 │ ├─ config/ # settings, urls
 │ ├─ requirements.txt
 │ └─ manage.py
@@ -118,6 +117,45 @@ school-contactbook/
 ├─ README.md
 └─ LICENSE
 
+- [ ] バックエンド API
+- [ ] フロントエンド UI
+- [ ] テストコード
+- [ ] ドキュメント更新
+
+
+## ロール別確認
+- [ ] 生徒が自分の記録だけ閲覧・提出できる
+- [ ] 担任が担当クラスの生徒記録だけ閲覧できる
+- [ ] 担任が既読処理を行える
+- [ ] 管理者が全体を管理できる
+
+
+## 受け入れ基準
+- ロールごとの制御が正しく機能している
+- CI/CD パイプラインでテストが通る
+
+.gitlab/issue_templates/bug.md
+
+## 不具合内容
+(不具合の説明)
+
+
+## 再現手順
+1.
+2.
+3.
+
+
+## 期待する結果
+
+
+## 実際の結果
+
+
+## 環境
+- GitLab プロジェクト: $CI_PROJECT_PATH
+
+- ブラウザ: Microsoft Edge バージョン xx
 conditions/models.py
 
 from django.db import models
