@@ -347,4 +347,4 @@ git remote add origin https://gitlab.com/<TAKAMASA MOCHIZUKI>/<Mochizuki_Takamas
 git add .
 git commit -m "Initial commit: PoC骨組みコード化（休日除外対応）"
 git branch -M main
-git push -u origin main
+git push -u origin main動作確認の追記です
