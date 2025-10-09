@@ -51,5 +51,6 @@ def register():
 def login():
     return "ログインページ（仮）"
 
+
 if __name__ == '__main__':
     app.run(debug=True)
