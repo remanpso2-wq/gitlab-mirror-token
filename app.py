@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required
 from flask_bcrypt import Bcrypt
+import os  # ← ★ これを追加！
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///diary.db'
@@ -10,7 +11,7 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 
-# ===== モデル定義 =====
+# ==== モデル定義 ====
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False)
@@ -35,10 +36,11 @@ class Report(db.Model):
     date = db.Column(db.String(20))
     is_checked = db.Column(db.Boolean, default=False)
 
-# ===== DB初期化 =====
+# ==== DB初期化 ====
 with app.app_context():
     db.create_all()
 
+# ==== 各ルート ====
 @app.route('/')
 def home():
     return "連絡帳システム（仮）稼働中"
@@ -51,6 +53,13 @@ def register():
 def login():
     return "ログインページ（仮）"
 
+# ==== ★ DB確認ルート ====
+@app.route('/check_db')
+def check_db():
+    if os.path.exists("diary.db"):
+        return "✅ diary.db found!"
+    else:
+        return "❌ diary.db not found!"
 
 if __name__ == '__main__':
     app.run(debug=True)
