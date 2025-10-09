@@ -5,10 +5,12 @@ from flask_bcrypt import Bcrypt
 import os  # ← ★ これを追加！
 
 app = Flask(__name__)
-import os  # ファイル冒頭のimport群に追加済みでOK
+import os  
+
 # DBファイルをRender環境で確実に保存できるよう絶対パス指定
 db_path = os.path.join(os.getcwd(), "diary.db")
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
+
 
 app.config['SECRET_KEY'] = 'secret-key'
 db = SQLAlchemy(app)
