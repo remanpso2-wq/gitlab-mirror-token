@@ -12,6 +12,7 @@ db_path = os.path.join(os.getcwd(), "diary.db")
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{db_path}"
 
 
+
 app.config['SECRET_KEY'] = 'secret-key'
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
