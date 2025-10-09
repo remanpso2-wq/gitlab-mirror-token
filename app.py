@@ -43,5 +43,13 @@ with app.app_context():
 def home():
     return "連絡帳システム（仮）稼働中"
 
+@app.route('/register')
+def register():
+    return "登録ページ（仮）"
+
+@app.route('/login')
+def login():
+    return "ログインページ（仮）"
+
 if __name__ == '__main__':
     app.run(debug=True)
