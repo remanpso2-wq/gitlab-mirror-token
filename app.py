@@ -54,12 +54,15 @@ def login():
     return "ログインページ（仮）"
 
 # ==== ★ DB確認ルート ====
+
 @app.route('/check_db')
 def check_db():
+    import os
     if os.path.exists("diary.db"):
         return "✅ diary.db found!"
     else:
         return "❌ diary.db not found!"
+
 
 if __name__ == '__main__':
     app.run(debug=True)
