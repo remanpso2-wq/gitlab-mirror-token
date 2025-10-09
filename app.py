@@ -66,11 +66,11 @@ def home():
 
 @app.route('/register')
 def register():
-    return "登録ページ（仮）"
+    return "登録ページ（仮)"
 
 @app.route('/login')
 def login():
-    return "ログインページ（仮）"
+    return "ログインページ（仮)"
 
 # ==== ★ DB確認ルート ====
 
@@ -86,4 +86,4 @@ def check_db():
 if __name__ == '__main__':
     app.run(debug=True)
 
-python 　# Updated at 2025-10-09 for Render fix 　
+python # Updated at 2025-10-09 for Render fix 　
