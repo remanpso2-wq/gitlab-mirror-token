@@ -1,9 +1,29 @@
 # Mochizuki_Takamasa_internProject01
 
-## 📘 プロジェクト概要
+## 🧾 課題①：Flask × SQLite × Render（基本構成）
+🎯 課題概要
+Flaskを用いた簡易的なWebアプリを構築し
+SQLiteデータベースの自動生成とRender環境でのデプロイを実現しました。
 学校向け「連絡帳システム（PoC版）」です。  
 生徒・担任・管理者の3ロールで連携し、  
 平日のみ記録を提出・確認できるWebアプリケーションを開発します。
+
+🧩 プロジェクト情報
+項目	内容
+開発者	TAKAMASA MOCHIZUKI
+環境	Python 3.11 / Flask
+データベース	SQLite（diary.db）
+デプロイ環境	Render（Free Tier）
+リポジトリ管理	GitLab
+動作確認日	2025/10/09
+
+Mochizuki_Takamasa_internProject01/
+├─ app.py                # Flaskアプリ本体
+├─ requirements.txt      # 依存パッケージ定義
+├─ runtime.txt           # Pythonランタイム指定
+├─ Procfile              # Renderデプロイ用設定
+└─ README.md             # プロジェクト概要
+
 
 ---
 ##🧩 リポジトリ構成
@@ -52,6 +72,13 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 import jpholiday
 from django.core.exceptions import ValidationError
+
+📦 使用パッケージ（requirements.txt）
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Flask-Bcrypt
+
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -178,5 +205,18 @@ build_and_push:
 ##管理者がユーザー作成・クラス割当できる
 ##CI/CD パイプラインでテストが通ること
 
-##👤 作者
-##望月 孝真 (Takamasa Mochizuki)
+🏁 まとめ
+
+本課題では、
+
+FlaskでのWebアプリ構築
+
+SQLiteデータベースの自動生成
+
+GitLab連携とRenderデプロイ
+
+を通じて、基本的なWebアプリ開発の流れを理解しました。
+
+次の課題では、
+ログイン認証やユーザー登録など、
+フォーム入力 → DB登録 → 表示 までの流れを実装予定です
