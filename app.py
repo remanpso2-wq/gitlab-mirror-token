@@ -44,10 +44,9 @@ class Report(db.Model):
     is_checked = db.Column(db.Boolean, default=False)
 
 # ==== DB初期化 ====
-@app.before_first_request
-def init_db():
-    with app.app_context():
-        db.create_all()
+with app.app_context():
+    db.create_all()
+
 
 
 # ==== 各ルート ====
