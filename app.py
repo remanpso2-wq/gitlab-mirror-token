@@ -47,7 +47,17 @@ class Report(db.Model):
 with app.app_context():
     db.create_all()
 
+# ==== RenderでDBが確実に生成されるようにする ====
+def ensure_db_exists():
+    import os
+    db_path = os.path.join(os.getcwd(), "diary.db")
+    if not os.path.exists(db_path):
+        print("🟡 diary.db not found — creating new database...")
+        with app.app_context():
+            db.create_all()
+        print("✅ diary.db successfully created!")
 
+ensure_db_exists()
 
 # ==== 各ルート ====
 @app.route('/')
