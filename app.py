@@ -85,18 +85,19 @@ def check_db():
 # ==== テストユーザー自動追加 ====
 @app.before_first_request
 def create_test_users():
-    from your_model_file import Student  # Studentモデルの場所に応じて変更してね
+    from app import Student  # Studentモデルの場所に応じて変更してね
 
     test_user = Student(id='test_student', name='テスト学生', password='1234')
     teacher_user = Student(id='teacher', name='担任ユーザー', password='abcd')
 
-    # すでに存在しない場合だけ追加
-    if not Student.query.filter_by(id='test_student').first():
-        db.session.add(test_user)
-    if not Student.query.filter_by(id='teacher').first():
-        db.session.add(teacher_user)
-    db.session.commit()
-    print("✅ テスト用アカウントを初期化しました！")
+# すでに存在しない場合だけ追加
+if Student.query.filter_by(id='test_student').first() is None:
+    db.session.add(test_user)
+if Student.query.filter_by(id='teacher').first() is None:
+    db.session.add(teacher_user)
+db.session.commit()
+
+
 
 
 
