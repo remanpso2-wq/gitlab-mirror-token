@@ -205,6 +205,12 @@ build_and_push:
 ##管理者がユーザー作成・クラス割当できる
 ##CI/CD パイプラインでテストが通ること
 
+📊 テスト用アカウント
+
+- 学生用: ID = test_student / PW = 1234
+- 担任用: ID = teacher / PW = abcd
+
+
 🏁 まとめ
 
 本課題では、
