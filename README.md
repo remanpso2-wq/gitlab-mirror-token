@@ -1,130 +1,182 @@
-# Mochizuki_Takamasa_internProject01 — 課題① 提出用
+# Mochizuki_Takamasa_internProject01 — 課題① 提出用 README（完全版）
 
 学校向け「連絡帳管理」PoC（課題①）。  
-**前登校日のみ提出可**／**同日重複禁止**／**既読はPOST** をサーバ側で厳密に担保します。  
+**前登校日のみ提出可**／**同日重複禁止**／**既読は POST** をサーバ側で厳密に担保。  
 実装は **Flask + SQLite**。最小UIは `templates/index.html`。
 
 ---
 
-## 📦 リポジトリ構成（最小）
+## 📦 リポジトリ構成
 
 Mochizuki_Takamasa_internProject01/
 ├─ app.py # 本体（前登校日バリデーション/重複禁止/既読POST）
 ├─ templates/
-│ └─ index.html # 最小UI（提出フォームと一覧）
-├─ seed.py # サンプルデータ投入（任意）
-├─ .env.example # 環境変数テンプレート（.env は含めない）
+│ └─ index.html # 最小UI（提出フォーム + 一覧）
+├─ seed.py # サンプルデータ投入（管理者操作を seed で代替）
+├─ .env.example # 環境変数テンプレ（.env は含めない）
 ├─ .gitignore # .venv/.env/*.db などを除外
 ├─ requirements.txt # 依存（Flask / Flask-SQLAlchemy）
-├─ runtime.txt # python-3.11.x（デプロイ互換）
-├─ Procfile # （任意）gunicorn起動などのデプロイ向け
-├─ README.md # 本ファイル
-└─ CHECKLIST.md # 任意。提出前セルフチェック
+├─ runtime.txt # python-3.11.x（デプロイ互換用）
+├─ Procfile # 任意（gunicorn 起動用）
+└─ doc/
+├─ presentation.md # 課題①スライド（Marp）
+└─ presentation_kadai2.md # 課題②スライド（任意：用意していれば）
 
 
 > **注意**: Flask は既定で `templates/` を読むため、フォルダ名は複数形です。
 
 ---
 
-## ✅ 課題①の要件に対する実装ポイント（合否の核）
+## ✅ 課題① 仕様への対応（合否の核）
 
 - **前登校日バリデーション**  
-  `prev_schoolday_str()` で「土日除外の前営業日」を算出。`/submit` 保存直前に **date==前登校日** を厳密チェック。  
-  ※祝日考慮なし（要件準拠）。
+  `prev_schoolday_str()` で「土日除外の前営業日」を算出。`/submit` 保存直前に **date==前登校日** を厳密チェック（祝日考慮なし）。
 
 - **同日重複の禁止**  
-  `(student_id, date)` の一意制約（アプリロジック＆DB制約）で再提出をブロック。
+  `(student_id, date)` の存在チェック＋DB一意制約で再提出をブロック。
 
-- **既読は POST でのみ**  
-  `/check/<id>` は **POST専用**。UIはリンクではなくフォーム+ボタンで送信。
+- **既読は POST**  
+  `/check/<id>` は **POST専用**。UIはフォーム＋ボタン送信（リンク直叩き不可）。
 
-- **閲覧は可能、改変不可**  
+- **閲覧のみ／編集不可**  
   提出済みレコードは一覧で見えるが、編集UIは持たない（既読＝過去記録化）。
 
-- （任意）**学年/クラスの最小対応**  
-  `Student.grade / class_name` を追加済み。`/?grade=3&class=A` で簡易フィルタ可能。
+- **学年/クラスでの利用（簡易対応）**  
+  `Student.grade / class_name` を保持。`/?grade=3&class=A` で簡易フィルタ可能。  
+  ※ 今回は PoC のため **権限・ログインは簡略化**（下記の注記参照）。
 
 ---
 
-## 🛠 セットアップ & 起動（PowerShell想定）
+## 🔐 運用ポリシーと注記（提出観点の追記）
 
+- **管理者操作は seed.py で代替**  
+  本 PoC では GUI の管理画面を省略し、アカウント／初期データ作成は `seed.py` による投入で代替します。
+
+- **権限の簡略化について**  
+  課題①では「生徒が自分の記録のみ閲覧」の要件に対し、本 PoC は **ログイン/権限を簡略化**しています。  
+  レビュー用に「単一画面で動作確認可能」とするためで、将来は `flask-login` 等で分離予定です。
+
+- **秘匿情報の扱い**  
+  `.env` 実体と SQLite の `*.db` は **コミットしません**。`/.gitignore` 済み。  
+  代わりに `.env.example` を同梱しています。
+
+---
+
+## 👤 テストアカウント（seed.py で投入される例）
+
+| 区分   | 氏名       | 備考                   |
+|-------|------------|------------------------|
+| 生徒   | 望月 孝義  | grade=3, class=A       |
+| 生徒   | 佐藤 花子  | grade=3, class=A       |
+
+> `seed.py` 実行で上記と直近のテスト提出データが生成されます。  
+> 本 PoC はログインを省略しているため、画面からは全体を確認できます。
+
+---
+
+## 🛠 セットアップ & 起動
+
+### PowerShell
 ```powershell
-# 0) （初回のみ）仮想環境
+cd "$HOME\Desktop\mochizuki_takamasa_internproject01"
+
+# 仮想環境（初回のみ）
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# 1) 依存インストール
+# 依存
 pip install -r requirements.txt
 
-# 2) 環境変数（必要なら値を調整）
+# 環境変数（必要なら編集）
 Copy-Item .env.example .env
 
-# 3) サンプルデータ投入（任意）
+# 初期データ投入（任意）
 py .\seed.py
 
-# 4) 起動
+# 起動
 $env:FLASK_APP = "app.py"
 $env:FLASK_ENV = "development"
 flask run -p 8000
 # → http://localhost:8000
 
-Git Bash の場合：
-source .venv/Scripts/activate → python seed.py → flask run -p 8000
+cd ~/Desktop/mochizuki_takamasa_internproject01
+python -m venv .venv
+source .venv/Scripts/activate
+pip install -r requirements.txt
+cp .env.example .env
+python seed.py
+FLASK_APP=app.py FLASK_ENV=development flask run -p 8000
 
-🧪 動作確認チェックリスト（短時間でOK）
+動作確認チェックリスト
 
-画面 / が表示され、前登校日がフォームの既定日に入っている
+画面 / が表示され、フォーム日付が 前登校日 になっている
 
-前登校日以外の date を入力 → 弾かれる（フラッシュ表示）
+今日の日付で送信 → 弾かれる（フラッシュ表示）
 
-同じ生徒・同日で再提出 → 弾かれる（重複禁止）
+前登校日で送信 → 一覧に追加される
 
-一覧の「既読にする」→ POST で既読化される
+同じ生徒・同じ日付で再送信 → 重複禁止で弾かれる
 
-/?grade=3&class=A のようなクエリで簡易フィルタが効く（任意）
+行の「既読にする」→ POST で ✅ に変わる
 
-🗃 データモデル（簡易ER）
-Student(id, name, grade?, class_name?)
-Report(id, student_id, content, date(YYYY-MM-DD string), is_checked)
-# Unique: (student_id, date)
+/?grade=3&class=A で フィルタ が効く
 
-Unique制約で同日二重登録をロジック & DB 両面で防止
+🔍 エンドポイント
+/	GET	一覧 + 提出フォーム（デフォルトで前登校日を表示）
+/submit	POST	前登校日チェック & 同日重複禁止 を満たして保存
+/check/<report_id>	POST	既読処理（POSTのみ）
 
-フィルタ用途に grade/class_name を設置（空でも動作可）
+🗃 データモデル（ER 図 / Mermaid）
+erDiagram
+  STUDENT ||--o{ REPORT : has
+  STUDENT {
+    int id PK
+    string name
+    int grade
+    string class_name
+  }
+  REPORT {
+    int id PK
+    int student_id FK
+    string date  "YYYY-MM-DD"
+    bool is_checked
+    text content
+  }
 
-🔐 セキュリティ・運用
-
-.env と 実DB はコミットしない
-
-.env.example を配布、評価側は .env を作って起動
-
-SQLite の *.db は .gitignore 済み（instance/ も除外）
-
-フォーム送信は今は最小構成（CSRFは課題②以降で強化想定）
+🎛 学年・クラスの使い方（簡易運用）
+生徒の grade / class_name は seed で設定（必要なら DB 直接更新でも可）
+一覧のクエリで絞り込み：
+例）/?grade=3&class=A
+片方だけでもOK：/?grade=3
 
 🚀 デプロイ（任意）
-
-runtime.txt は python-3.11.x を指定（例：python-3.11.9）
-
-Procfile がある場合は web: gunicorn app:app などを設定
-
-環境変数：SECRET_KEY / DATABASE_URL（未指定ならローカルSQLite）
+runtime.txt: python-3.11.x を指定（例：python-3.11.9）
+Procfile: web: gunicorn app:app など
+環境変数：SECRET_KEY / DATABASE_URL（未指定は SQLite ローカル）
 
 🧯 トラブルシュート
 
-テンプレートが見つからない
-→ フォルダ名が templates/（複数形）か確認。
+500 / no such table: student
+→ python seed.py を実行（DB作成＋サンプル投入）。
+または app.py に @app.before_first_request で db.create_all() を追加。
 
-ポート競合
-→ -p 8000 を別ポートに変更。
+TemplateNotFound: index.html
+→ templates/index.html が存在／スペル／app.py と同階層か確認。
+フォルダ名は templates（複数形）。
 
-Windowsで仮想環境が有効化できない
-→ 管理者PowerShell で Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+PowerShell で venv が有効化できない
+→ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned を一度実行。
 
 📥 提出前セルフチェック
-templates/index.html が存在し、一覧とフォームが表示される
-前登校日以外の提出が不可
+前登校日以外の提出不可
 (student_id, date) 重複不可
 既読が POST で反映
-.env/*.db はコミットされていない（.env.example は含む）
-requirements.txt / runtime.txt が存在
+templates/index.html あり（UI表示OK）
+.env/*.db は コミットしていない（.env.example は含む）
+requirements.txt / runtime.txt あり
+doc/presentation.md（課題①スライド）あり
+README に「seed で管理者操作を代替」「権限簡略化の注記」あり
+
+📝 補足
+本 PoC は課題①の主目的（提出ルールの機械化）を最小構成で満たします。
+課題②（分析・共有メモ等）は doc/presentation_kadai2.md で説明（実装がある場合）
