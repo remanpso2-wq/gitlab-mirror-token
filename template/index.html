@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>課題① 連絡帳PoC</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 24px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+    .pill { display:inline-block; padding:3px 8px; border-radius:14px; background:#eee; margin-right:6px; }
+    .ok { color: #2e7d32; } .ng { color:#c62828; }
+  </style>
+</head>
+<body>
+  <h1>課題① 連絡帳PoC</h1>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}
+      <ul>
+        {% for m in messages %}<li>{{ m }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <h2>✍ 提出フォーム（前登校日のみ）</h2>
+  <form method="post" action="{{ url_for('submit_report') }}">
+    <div>
+      学生名：<input name="student_name" required placeholder="例）望月 孝義" />
+    </div>
+    <div>
+      日付：<input type="date" name="date" required value="{{ expected_date }}" />
+      <span class="pill">前登校日：{{ expected_date }}</span>
+    </div>
+    <div>
+      内容：<br/>
+      <textarea name="content" required rows="3" cols="60" placeholder="今日の様子など"></textarea>
+    </div>
+    <button type="submit">登録</button>
+  </form>
+
+  <h2>📄 最新提出</h2>
+  <table>
+    <thead>
+      <tr><th>ID</th><th>学生</th><th>日付</th><th>内容</th><th>既読</th><th>操作</th></tr>
+    </thead>
+    <tbody>
+      {% for r in reports %}
+      <tr>
+        <td>#{{ r.id }}</td>
+        <td>{{ r.student.name }}</td>
+        <td>{{ r.date }}</td>
+        <td>{{ r.content }}</td>
+        <td>{% if r.is_checked %}<span class="ok">✅</span>{% else %}<span class="ng">❌</span>{% endif %}</td>
+        <td>
+          {% if not r.is_checked %}
+          <form method="post" action="{{ url_for('check_report', report_id=r.id) }}">
+            <button type="submit">既読にする</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>
