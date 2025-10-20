@@ -1,224 +1,130 @@
-# Mochizuki_Takamasa_internProject01
+# Mochizuki_Takamasa_internProject01 — 課題① 提出用
 
-## 🧾 課題①：Flask × SQLite × Render（基本構成）
-🎯 課題概要
-Flaskを用いた簡易的なWebアプリを構築し
-SQLiteデータベースの自動生成とRender環境でのデプロイを実現しました。
-学校向け「連絡帳システム（PoC版）」です。  
-生徒・担任・管理者の3ロールで連携し、  
-平日のみ記録を提出・確認できるWebアプリケーションを開発します。
+学校向け「連絡帳管理」PoC（課題①）。  
+**前登校日のみ提出可**／**同日重複禁止**／**既読はPOST** をサーバ側で厳密に担保します。  
+実装は **Flask + SQLite**。最小UIは `templates/index.html`。
 
-🧩 プロジェクト情報
-項目	内容
-開発者	TAKAMASA MOCHIZUKI
-環境	Python 3.11 / Flask
-データベース	SQLite（diary.db）
-デプロイ環境	Render（Free Tier）
-リポジトリ管理	GitLab
-動作確認日	2025/10/09
+---
+
+## 📦 リポジトリ構成（最小）
 
 Mochizuki_Takamasa_internProject01/
-├─ app.py                # Flaskアプリ本体
-├─ requirements.txt      # 依存パッケージ定義
-├─ runtime.txt           # Pythonランタイム指定
-├─ Procfile              # Renderデプロイ用設定
-└─ README.md             # プロジェクト概要
+├─ app.py # 本体（前登校日バリデーション/重複禁止/既読POST）
+├─ templates/
+│ └─ index.html # 最小UI（提出フォームと一覧）
+├─ seed.py # サンプルデータ投入（任意）
+├─ .env.example # 環境変数テンプレート（.env は含めない）
+├─ .gitignore # .venv/.env/*.db などを除外
+├─ requirements.txt # 依存（Flask / Flask-SQLAlchemy）
+├─ runtime.txt # python-3.11.x（デプロイ互換）
+├─ Procfile # （任意）gunicorn起動などのデプロイ向け
+├─ README.md # 本ファイル
+└─ CHECKLIST.md # 任意。提出前セルフチェック
 
 
----
-##🧩 リポジトリ構成
-#school-contactbook/
-├─ frontend/                # React (TypeScript)
-│  ├─ public/
-│  ├─ src/
-│  │  ├─ components/
-│  │  ├─ pages/
-│  │  │  ├─ Login.tsx
-│  │  │  └─ ContactList.tsx
-│  │  ├─ api/
-│  │  └─ index.tsx
-│  ├─ package.json
-│  └─ tsconfig.json
-│
-├─ backend/                 # Django REST Framework
-│  ├─ contacts/             # 連絡帳アプリ
-│  ├─ users/                # 認証・権限管理
-│  ├─ config/               # 設定
-│  ├─ requirements.txt
-│  └─ manage.py
-│
-├─ infra/                   # Docker・CI設定
-│  ├─ Dockerfile.frontend
-│  ├─ Dockerfile.backend
-│  └─ docker-compose.yml
-│
-├─ .gitlab-ci.yml           # GitLab CI/CDパイプライン
-├─ README.md
-└─ LICENSE
-
+> **注意**: Flask は既定で `templates/` を読むため、フォルダ名は複数形です。
 
 ---
-##⚙️ 技術スタック
-##区分	使用技術
-##フロントエンド	React + TypeScript + Tailwind CSS
-##バックエンド	Django + Django REST Framework
-##データベース	PostgreSQL
-##認証方式	JWT（JSON Web Token）
-##CI/CD	GitLab CI + Docker
-##休日判定	jpholiday（日本の祝日判定ライブラリ）
 
-##🧩 Django モデル例
-from django.contrib.auth.models import AbstractUser
-from django.db import models
-import jpholiday
-from django.core.exceptions import ValidationError
+## ✅ 課題①の要件に対する実装ポイント（合否の核）
 
-📦 使用パッケージ（requirements.txt）
-Flask
-Flask-SQLAlchemy
-Flask-Login
-Flask-Bcrypt
+- **前登校日バリデーション**  
+  `prev_schoolday_str()` で「土日除外の前営業日」を算出。`/submit` 保存直前に **date==前登校日** を厳密チェック。  
+  ※祝日考慮なし（要件準拠）。
 
+- **同日重複の禁止**  
+  `(student_id, date)` の一意制約（アプリロジック＆DB制約）で再提出をブロック。
 
-class User(AbstractUser):
-    ROLE_CHOICES = (
-        ("student", "生徒"),
-        ("teacher", "担任"),
-        ("admin", "管理者"),
-    )
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="student")
-    assigned_class = models.CharField(max_length=16, blank=True, null=True)
-    grade = models.CharField(max_length=16, blank=True, null=True)
+- **既読は POST でのみ**  
+  `/check/<id>` は **POST専用**。UIはリンクではなくフォーム+ボタンで送信。
 
+- **閲覧は可能、改変不可**  
+  提出済みレコードは一覧で見えるが、編集UIは持たない（既読＝過去記録化）。
 
-class ContactEntry(models.Model):
-    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name="entries")
-    date = models.DateField(auto_now_add=True)
-    content = models.TextField()
-    condition = models.CharField(max_length=64, blank=True)
-    liked = models.BooleanField(default=False)
-    read_by_teacher = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
+- （任意）**学年/クラスの最小対応**  
+  `Student.grade / class_name` を追加済み。`/?grade=3&class=A` で簡易フィルタ可能。
 
-    def clean(self):
-        # 土日祝日は提出不可
-        if self.date.weekday() >= 5 or jpholiday.is_holiday(self.date):
-            raise ValidationError("土日祝日は提出できません")
+---
 
-##🧩 React ページ例
-import { useEffect, useState } from "react";
+## 🛠 セットアップ & 起動（PowerShell想定）
 
-interface ContactEntry {
-  id: number;
-  student_name: string;
-  date: string;
-  content: string;
-  condition: string;
-  liked: boolean;
-  read_by_teacher: boolean;
-}
+```powershell
+# 0) （初回のみ）仮想環境
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
 
-export default function ContactList() {
-  const [entries, setEntries] = useState<ContactEntry[]>([]);
+# 1) 依存インストール
+pip install -r requirements.txt
 
-  useEffect(() => {
-    fetch("/api/contactentries/")
-      .then(res => res.json())
-      .then(data => setEntries(data));
-  }, []);
+# 2) 環境変数（必要なら値を調整）
+Copy-Item .env.example .env
 
-  return (
-    <div className="p-4">
-      <h1 className="text-2xl mb-4">連絡帳一覧</h1>
-      <table className="w-full border">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="p-2 border">日付</th>
-            <th className="p-2 border">生徒名</th>
-            <th className="p-2 border">内容</th>
-            <th className="p-2 border">状態</th>
-            <th className="p-2 border">👍</th>
-            <th className="p-2 border">既読</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map(e => (
-            <tr key={e.id}>
-              <td className="border p-2">{e.date}</td>
-              <td className="border p-2">{e.student_name}</td>
-              <td className="border p-2">{e.content}</td>
-              <td className="border p-2">{e.condition}</td>
-              <td className="border p-2">{e.liked ? "👍" : ""}</td>
-              <td className="border p-2">{e.read_by_teacher ? "✅" : ""}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-##🧪 CI/CD 設定（.gitlab-ci.yml）
-stages:
-  - lint
-  - test
-  - build
-  - deploy
+# 3) サンプルデータ投入（任意）
+py .\seed.py
 
-variables:
-  REGISTRY: registry.gitlab.com/<USERNAME>/<PROJECT>
-  FRONTEND_IMAGE: $REGISTRY/frontend
-  BACKEND_IMAGE: $REGISTRY/backend
+# 4) 起動
+$env:FLASK_APP = "app.py"
+$env:FLASK_ENV = "development"
+flask run -p 8000
+# → http://localhost:8000
 
-lint_backend:
-  stage: lint
-  image: python:3.11
-  script:
-    - cd backend
-    - pip install -r requirements.txt
-    - flake8
+Git Bash の場合：
+source .venv/Scripts/activate → python seed.py → flask run -p 8000
 
-test_backend:
-  stage: test
-  image: python:3.11
-  script:
-    - cd backend
-    - pip install -r requirements.txt
-    - pytest
+🧪 動作確認チェックリスト（短時間でOK）
 
-build_and_push:
-  stage: build
-  image: docker:24
-  services:
-    - docker:dind
-  script:
-    - docker build -t $FRONTEND_IMAGE:$CI_COMMIT_SHA -f infra/Dockerfile.frontend .
-    - docker build -t $BACKEND_IMAGE:$CI_COMMIT_SHA -f infra/Dockerfile.backend .
-    - docker push $FRONTEND_IMAGE:$CI_COMMIT_SHA
-    - docker push $BACKEND_IMAGE:$CI_COMMIT_SHA
-  only:
-    - main
+画面 / が表示され、前登校日がフォームの既定日に入っている
 
-##🧭 開発ルール・受け入れ基準
-##生徒が自分の記録だけ閲覧・提出できる（平日のみ）
-##担任が担当クラスの提出状況を確認できる
-##担任が既読処理を行える
-##管理者がユーザー作成・クラス割当できる
-##CI/CD パイプラインでテストが通ること
+前登校日以外の date を入力 → 弾かれる（フラッシュ表示）
 
-📊 テスト用アカウント
+同じ生徒・同日で再提出 → 弾かれる（重複禁止）
 
-- 学生用: ID = test_student / PW = 1234
-- 担任用: ID = teacher / PW = abcd
+一覧の「既読にする」→ POST で既読化される
 
+/?grade=3&class=A のようなクエリで簡易フィルタが効く（任意）
 
-🏁 まとめ
+🗃 データモデル（簡易ER）
+Student(id, name, grade?, class_name?)
+Report(id, student_id, content, date(YYYY-MM-DD string), is_checked)
+# Unique: (student_id, date)
 
-本課題では、
+Unique制約で同日二重登録をロジック & DB 両面で防止
 
-FlaskでのWebアプリ構築
+フィルタ用途に grade/class_name を設置（空でも動作可）
 
-SQLiteデータベースの自動生成
+🔐 セキュリティ・運用
 
-GitLab連携とRenderデプロイ
+.env と 実DB はコミットしない
 
-を通じて、基本的なWebアプリ開発の流れを理解しました。
+.env.example を配布、評価側は .env を作って起動
+
+SQLite の *.db は .gitignore 済み（instance/ も除外）
+
+フォーム送信は今は最小構成（CSRFは課題②以降で強化想定）
+
+🚀 デプロイ（任意）
+
+runtime.txt は python-3.11.x を指定（例：python-3.11.9）
+
+Procfile がある場合は web: gunicorn app:app などを設定
+
+環境変数：SECRET_KEY / DATABASE_URL（未指定ならローカルSQLite）
+
+🧯 トラブルシュート
+
+テンプレートが見つからない
+→ フォルダ名が templates/（複数形）か確認。
+
+ポート競合
+→ -p 8000 を別ポートに変更。
+
+Windowsで仮想環境が有効化できない
+→ 管理者PowerShell で Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+
+📥 提出前セルフチェック
+templates/index.html が存在し、一覧とフォームが表示される
+前登校日以外の提出が不可
+(student_id, date) 重複不可
+既読が POST で反映
+.env/*.db はコミットされていない（.env.example は含む）
+requirements.txt / runtime.txt が存在
